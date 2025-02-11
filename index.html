@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+</head>
+<style>
+    #loading{
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        position: absolute;
+        top: 0;
+        left:0;
+        display: flex;
+        color: white;
+        justify-content: center;
+        align-items: center;
+    }
+</style>
+<body>
+    <div id="loading">
+        LOADING...
+    </div>
+    <div class="container"></div>
+    <button id="Btn">Button</button>
+    <script type="module">
+        let button = document.querySelector("#Btn")
+        import {chars} from "/charsList.js";
+        import init, { add, run } from '/pkg/WasmExamples.js';
+        let worker = new Worker("/worker.js", {type: "module"});
+
+        let imp = import('/pkg/WasmExamples.js');
+        let mod;
+        let counter = [];
+        
+        imp.then(res=>{
+            console.log(res)
+            mod = res
+            // button.onclick=(e)=>{
+            //     addCounter()
+            // }
+        })
+
+        function addCounter(){
+            let ctr = mod.Counter.new(randomChar(),0)
+            counter.push(ctr)
+            update()
+            console.log("counter")
+        }
+
+        function update(){
+            let container = document.querySelector(".container")
+
+            // Unnecessary complex code to remove all children of container
+            // while (container.hasChildNodes()) {
+            // if (container.lastChild.id == 'adder') break;
+            //     container.removeChild(container.lastChild);
+            // }
+
+            container.innerHTML = ""
+            for (var i = 0; i < counter.length; i++) {
+                let counter2 = counter[i];
+                container.appendChild(newCounter(counter2.key(), counter2.count(), ev => {
+                    counter2.increment();
+                    update();
+                }));
+            }
+        }
+
+        function newCounter(key, value, cb) {
+            let container = document.createElement('div');
+            container.setAttribute('class', 'counter');
+            let title = document.createElement('h1');
+            title.appendChild(document.createTextNode('Counter ' + key));
+            container.appendChild(title);
+            container.appendChild(newField('Count', value));
+            let plus = document.createElement('button');
+            plus.setAttribute('type', 'button');
+            plus.setAttribute('class', 'plus-button');
+            plus.appendChild(document.createTextNode('+'));
+            plus.addEventListener('click', cb);
+            container.appendChild(plus);
+            return container;
+        }
+
+        function newField(key, value) {
+            let ret = document.createElement('div');
+            ret.setAttribute('class', 'field');
+            let name = document.createElement('span');
+            name.setAttribute('class', 'name');
+            name.appendChild(document.createTextNode(key));
+            ret.appendChild(name);
+            let val = document.createElement('span');
+            val.setAttribute('class', 'value');
+            val.appendChild(document.createTextNode(value));
+            ret.appendChild(val);
+            return ret;
+        }
+        function randomChar() {
+            let randomIdx = Math.floor(Math.random() * chars.length-1)
+            let char = chars[randomIdx]
+            return char
+        }
+
+        init().then(() => {
+            add(1, 2);
+            run()
+        });
+        worker.onmessage = (e) => {
+            console.log(" From worker",e.data.action);
+            if (e.data.action === "fetch_wasm"){
+                fetch("/pkg/WasmExamples_bg.wasm").then(res => res.arrayBuffer()).then(bytes => {
+                    worker.postMessage(bytes, [bytes]);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
