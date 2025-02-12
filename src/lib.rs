@@ -3,7 +3,7 @@ use std::fmt::Result;
 use wasm_bindgen::prelude::*;
 use js_sys::{Error, Function, Object, Reflect, WebAssembly};
 use wasm_bindgen_futures::{JsFuture, spawn_local};
-use web_sys::{Document, Window};
+use web_sys::{Document, HtmlElement, Window};
 
 #[wasm_bindgen]
 extern "C" {
@@ -105,14 +105,21 @@ pub fn Start(){
 
 fn setup_clock(window: &Window, document: &Document){
     let mut count = 0;
-    let func = Closure::<dyn Fn()>::new(move|| {
-        console_logger!("Hello from Rust!")
-    });
-    window.set_interval_with_callback_and_timeout_and_arguments_0(
+    let func = Closure::<dyn Fn()>::new({
+        let doc = document.clone();
+        move|| {
+            let binding = doc.clone().get_element_by_id("loading").unwrap();
+            let val = binding.dyn_ref::<HtmlElement>().expect("ele");
+
+            val.set_hidden(!val.hidden());
+            console_logger!("Hello from Rust! {}", count.clone());
+        }}
+    );
+    let res = window.set_interval_with_callback_and_timeout_and_arguments_0(
         func.as_ref().unchecked_ref(), 1000
     ).unwrap();
     let button = document.query_selector("button").unwrap();
-
+    func.forget();
 }
 
 #[wasm_bindgen]
