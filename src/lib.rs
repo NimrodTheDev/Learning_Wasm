@@ -124,6 +124,7 @@ fn setup_clock(window: &Window, document: &Document){
 
 #[wasm_bindgen]
 pub fn call_run(){
+    
     spawn_local(async{
         runner().await.unwrap_throw()
     });
