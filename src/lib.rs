@@ -1,4 +1,4 @@
-use std::fmt::Result;
+use std::{fmt::Result, time::{Duration, SystemTime, UNIX_EPOCH}};
 
 use wasm_bindgen::prelude::*;
 use js_sys::{Error, Function, Object, Reflect, WebAssembly};
@@ -94,14 +94,33 @@ pub fn Start(){
     let document = window.document().unwrap();
     let body = document.body().unwrap();
 
+
+    let performance = window.performance().expect("Performance");
+
+    console_logger!("Current performance: {}", performance.now());
+
+
     setup_clock(&window, &document);
 
     let p = document.create_element("p").unwrap();
     p.set_text_content(Some("Hello from Rust!"));
     
     body.append_child(&p).unwrap();
+
+    let start = perf_to_sys(performance.timing().request_start());
+    let stop = perf_to_sys(performance.timing().response_end());
+
+    console_logger!("Started at {}", humantime::format_rfc3339(start));
+    console_logger!("Stoped at {}", humantime::format_rfc3339(stop));
+
 }
 
+fn perf_to_sys(amt: f64)-> SystemTime{
+    let secs = (amt as u64) / 1_000;
+    let nanos = (((amt as u64) % 1_000) as u32) * 1_000_000;
+
+    UNIX_EPOCH + Duration::new(secs, nanos)
+}
 
 fn setup_clock(window: &Window, document: &Document){
     let mut count = 0;
